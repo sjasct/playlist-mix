@@ -1,5 +1,5 @@
 {
-  "name": "playlist-mix",
+  "name": "spotify-mix",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,9 +10,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/joy": "^5.0.0-beta.52",
     "@spotify/web-api-ts-sdk": "^1.2.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^17.0.0 || ^18.0.0 || ^19.0.0",
+    "react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0"
+  },
+  "peerDependencies": {
+    "react": "^17.0.0 || ^18.0.0 || ^19.0.0",
+    "react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
