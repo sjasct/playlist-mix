@@ -85,7 +85,7 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
     });
   }
 
-  const handleChange = (event: React.SyntheticEvent | null, newValue: string | null) => {
+  const handleChange = (_event: React.SyntheticEvent | null, newValue: string | null) => {
     setSelectedDevice(newValue);
   };
 
