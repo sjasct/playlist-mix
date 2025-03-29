@@ -6,6 +6,10 @@ import { useSpotify } from './hooks/useSpotify';
 import Select from '@mui/joy/Select';
 import Option from '@mui/joy/Option';
 import Button from '@mui/joy/Button';
+import Stack from '@mui/system/Stack';
+import { FormControl } from '@mui/base';
+import FormLabel from '@mui/joy/FormLabel';
+import setRef from '@mui/utils/setRef';
 
 function App() {
   const sdk = useSpotify("5eca27e4e5304f898d675670471c8bb1", "http://localhost:5173", ["user-read-playback-state", "user-modify-playback-state", "playlist-read-private"]);
@@ -19,31 +23,29 @@ function App() {
 
 function CoreApp({ sdk }: { sdk: SpotifyApi }) {
   const [devices, setDevices] = useState<Device[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [devicesLoading, setDevicesLoading] = useState(true);
   const [tracksLoading, setTracksLoading] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const maxPlaylistItemLimit = 50;
 
   useEffect(() => {
-    setLoading(true);
+    setDevicesLoading(true);
 
-    const getData = async () => {
-      var deviceResponse = await sdk.player.getAvailableDevices();
-      setDevices(deviceResponse.devices);
+    const loadDevices = async () => {
+      sdk.player.getAvailableDevices().then((res) => {
+        setDevices(res.devices);
 
-      let activeDevices = deviceResponse.devices.filter(y => y.is_active);
-      if(activeDevices.length > 0){
-        setSelectedDevice(activeDevices[0].id);
-      }
+        let activeDevices = res.devices.filter(y => y.is_active);
+        if (activeDevices.length > 0 && !selectedDevice) {
+          setSelectedDevice(activeDevices[0].id);
+        }
+        setDevicesLoading(false)
+      });
     }
 
-    getData();
-    setLoading(false)
-  }, [])
-
-  if (loading || !devices) {
-    return (<p>loading</p>)
-  }
+    loadDevices();
+  }, [refreshKey])
 
   const playlistIds = [
     "1O5ArNRDbxDgtMYIlKkimA",
@@ -53,20 +55,20 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
     "00wJS6fyHVf4sWy0Px2XSa"
   ];
 
-  const getPlaylistItems = (id: string, offset: number,  resolve: (trackIds: string[]) => void, existingIds = [] as string[]) => {
+  const getPlaylistItems = (id: string, offset: number, resolve: (trackIds: string[]) => void, existingIds = [] as string[]) => {
     sdk.playlists.getPlaylistItems(id, undefined, undefined, maxPlaylistItemLimit, offset, undefined).then((r) => {
       existingIds = existingIds.concat(r.items.map((y) => `spotify:track:${y.track.id}`))
 
-      if(r.next){
+      if (r.next) {
         getPlaylistItems(id, offset + maxPlaylistItemLimit, resolve, existingIds);
       }
-      else{
+      else {
         resolve(existingIds);
       }
     })
   }
 
-  const playTracks = (deviceId : string) => {
+  const playTracks = (deviceId: string) => {
     setTracksLoading(true);
 
     let completedCount = 0;
@@ -77,7 +79,7 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
         trackIds = trackIds.concat(newTracks);
         completedCount++;
 
-        if(completedCount === playlistIds.length){
+        if (completedCount === playlistIds.length) {
           sdk.player.startResumePlayback(deviceId, undefined, trackIds, undefined, undefined);
           setTracksLoading(false);
         }
@@ -89,19 +91,33 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
     event: React.SyntheticEvent | null,
     newValue: string | null,
   ) => {
-    console.log(newValue);
     setSelectedDevice(newValue);
   };
 
+  const refresh = () => {
+    setRefreshKey(x => x + 1);
+  }
+
   return (
-    <div className="flex w-full flex-wrap md:flex-nowrap gap-4">
-      <Select onChange={handleChange} value={selectedDevice}>
+    <Stack
+      direction="column"
+      spacing={3}
+      sx={{
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <h2>Playlist Mixer</h2>
+      <p>Select a Spotify Connect device</p>
+      <Select onChange={handleChange} value={selectedDevice} disabled={devicesLoading || tracksLoading}>
         {devices.map((device) => (
           <Option key={device.id} value={device.id}>{device.name} {device.is_active && "(Active)"}</Option>
         ))}
       </Select>
-      <Button onClick={async () => await playTracks(selectedDevice!)} loading={tracksLoading} disabled={!selectedDevice}>Play</Button>
-    </div>
+
+      <Button onClick={async () => await playTracks(selectedDevice!)} loading={tracksLoading} disabled={!selectedDevice || devicesLoading}>Play</Button>
+      <Button color="neutral" onClick={refresh} disabled={!selectedDevice} loading={devicesLoading}>Refresh Devices</Button>
+    </Stack>
   );
 
 }
