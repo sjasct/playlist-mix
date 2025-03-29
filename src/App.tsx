@@ -1,6 +1,6 @@
 import './App.css'
 import { useEffect, useState } from 'react'
-import type { Devices, SpotifyApi } from '@spotify/web-api-ts-sdk';
+import type { Device, Devices, SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { useSpotify } from './hooks/useSpotify';
 
 import Select from '@mui/joy/Select';
@@ -18,16 +18,23 @@ function App() {
 }
 
 function CoreApp({ sdk }: { sdk: SpotifyApi }) {
-  const [devices, setDevices] = useState<Devices | null>(null);
+  const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [tracksLoading, setTracksLoading] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const maxPlaylistItemLimit = 50;
 
   useEffect(() => {
     setLoading(true);
 
     const getData = async () => {
-      setDevices(await sdk.player.getAvailableDevices())
+      var deviceResponse = await sdk.player.getAvailableDevices();
+      setDevices(deviceResponse.devices);
+
+      let activeDevices = deviceResponse.devices.filter(y => y.is_active);
+      if(activeDevices.length > 0){
+        setSelectedDevice(activeDevices[0].id);
+      }
     }
 
     getData();
@@ -78,14 +85,22 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
     });
   }
 
+  const handleChange = (
+    event: React.SyntheticEvent | null,
+    newValue: string | null,
+  ) => {
+    console.log(newValue);
+    setSelectedDevice(newValue);
+  };
+
   return (
     <div className="flex w-full flex-wrap md:flex-nowrap gap-4">
-      <Select>
-        {devices.devices.map((device) => (
+      <Select onChange={handleChange} value={selectedDevice}>
+        {devices.map((device) => (
           <Option key={device.id} value={device.id}>{device.name} {device.is_active && "(Active)"}</Option>
         ))}
       </Select>
-      <Button onClick={async () => await playTracks("b4a1beb6d62e8f486c47ce6c983c86d7bbb48bc2")} loading={tracksLoading}>Play</Button>
+      <Button onClick={async () => await playTracks(selectedDevice!)} loading={tracksLoading} disabled={!selectedDevice}>Play</Button>
     </div>
   );
 
