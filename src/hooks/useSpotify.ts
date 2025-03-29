@@ -1,7 +1,7 @@
 import { AuthorizationCodeWithPKCEStrategy, SpotifyApi, type SdkOptions } from '@spotify/web-api-ts-sdk';
 import { useEffect, useRef, useState } from 'react'
 
-export function useSpotify(clientId: string, redirectUrl: string, scopes: string[], config?: SdkOptions) : SpotifyApi | null {
+export function useSpotify(clientId: string, redirectUrl: string, scopes: string[], config?: SdkOptions): SpotifyApi | null {
 
     const [sdk, setSdk] = useState<SpotifyApi | null>(null);
     const { current: activeScopes } = useRef(scopes);

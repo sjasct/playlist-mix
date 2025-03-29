@@ -1,18 +1,15 @@
 import './App.css'
 import { useEffect, useState } from 'react'
-import type { Device, Devices, SpotifyApi } from '@spotify/web-api-ts-sdk';
+import type { Device, SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { useSpotify } from './hooks/useSpotify';
 
 import Select from '@mui/joy/Select';
 import Option from '@mui/joy/Option';
 import Button from '@mui/joy/Button';
 import Stack from '@mui/system/Stack';
-import { FormControl } from '@mui/base';
-import FormLabel from '@mui/joy/FormLabel';
-import setRef from '@mui/utils/setRef';
 
 function App() {
-  const sdk = useSpotify("5eca27e4e5304f898d675670471c8bb1", "http://localhost:5173", ["user-read-playback-state", "user-modify-playback-state", "playlist-read-private"]);
+  const sdk = useSpotify(import.meta.env.VITE_SPOTIFY_CLIENT_ID, import.meta.env.VITE_REDIRECT_URL, ["user-read-playback-state", "user-modify-playback-state", "playlist-read-private"]);
 
   return (
     <div>
@@ -47,6 +44,7 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
     loadDevices();
   }, [refreshKey])
 
+  // this is temp while it's just for personal use
   const playlistIds = [
     "1O5ArNRDbxDgtMYIlKkimA",
     "1fciLNsmAdiahiuV7kCFOH",
@@ -87,10 +85,7 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
     });
   }
 
-  const handleChange = (
-    event: React.SyntheticEvent | null,
-    newValue: string | null,
-  ) => {
+  const handleChange = (event: React.SyntheticEvent | null, newValue: string | null) => {
     setSelectedDevice(newValue);
   };
 
