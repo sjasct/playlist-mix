@@ -111,7 +111,7 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
       </Select>
 
       <Button onClick={async () => await playTracks(selectedDevice!)} loading={tracksLoading} disabled={!selectedDevice || devicesLoading}>Play</Button>
-      <Button color="neutral" onClick={refresh} disabled={!selectedDevice} loading={devicesLoading}>Refresh Devices</Button>
+      <Button color="neutral" onClick={refresh} loading={devicesLoading}>Refresh Devices</Button>
     </Stack>
   );
 
