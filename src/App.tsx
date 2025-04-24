@@ -78,11 +78,23 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
         completedCount++;
 
         if (completedCount === playlistIds.length) {
+          shuffle(trackIds)
           sdk.player.startResumePlayback(deviceId, undefined, trackIds, undefined, undefined);
           setTracksLoading(false);
         }
       });
     });
+  }
+
+  // https://stackoverflow.com/a/2450976
+  const shuffle = (array: any[]) => {
+    let currentIndex = array.length;
+  
+    while (currentIndex != 0) {
+      let randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex--;
+      [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+    }
   }
 
   const handleChange = (_event: React.SyntheticEvent | null, newValue: string | null) => {
