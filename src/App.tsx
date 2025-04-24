@@ -7,6 +7,8 @@ import Select from '@mui/joy/Select';
 import Option from '@mui/joy/Option';
 import Button from '@mui/joy/Button';
 import Stack from '@mui/system/Stack';
+import CircularProgress from '@mui/joy/CircularProgress';
+import Alert from '@mui/joy/Alert';
 
 function App() {
   const sdk = useSpotify(import.meta.env.VITE_SPOTIFY_CLIENT_ID, import.meta.env.VITE_REDIRECT_URL, ["user-read-playback-state", "user-modify-playback-state", "playlist-read-private"]);
@@ -22,23 +24,33 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
   const [devices, setDevices] = useState<Device[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
   const [tracksLoading, setTracksLoading] = useState(false);
+  const [intialLoad, setInitialLoad] = useState(true);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [invalidUser, setInvalidUser] = useState(false);
   const maxPlaylistItemLimit = 50;
 
   useEffect(() => {
     setDevicesLoading(true);
 
     const loadDevices = async () => {
-      sdk.player.getAvailableDevices().then((res) => {
-        setDevices(res.devices);
-
-        let activeDevices = res.devices.filter(y => y.is_active);
-        if (activeDevices.length > 0 && !selectedDevice) {
-          setSelectedDevice(activeDevices[0].id);
+      sdk.currentUser.profile().then((res) => {
+        if (res.id !== "thesamjas") {
+          setInvalidUser(true);
         }
-        setDevicesLoading(false)
-      });
+        else {
+          sdk.player.getAvailableDevices().then((res) => {
+            setDevices(res.devices);
+
+            let activeDevices = res.devices.filter(y => y.is_active);
+            if (activeDevices.length > 0 && !selectedDevice) {
+              setSelectedDevice(activeDevices[0].id);
+            }
+            setDevicesLoading(false);
+          });
+        }
+        setInitialLoad(false);
+      })
     }
 
     loadDevices();
@@ -89,7 +101,7 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
   // https://stackoverflow.com/a/2450976
   const shuffle = (array: any[]) => {
     let currentIndex = array.length;
-  
+
     while (currentIndex != 0) {
       let randomIndex = Math.floor(Math.random() * currentIndex);
       currentIndex--;
@@ -103,6 +115,21 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
 
   const refresh = () => {
     setRefreshKey(x => x + 1);
+  }
+
+  if (intialLoad) {
+    return <CircularProgress variant='plain' />
+  }
+
+  if (invalidUser) {
+    return <Alert color="warning">
+      <Stack direction='column'>
+        <b>Sorry, Playlist Mixer is built for personal use</b>
+        <br />
+        <span>This app does not support other users at this time.</span>
+        <span>If you're interested, the source for this project lives in <a href='https://github.com/sjasct/playlist-mix'>this GitHub repo</a>.</span>
+      </Stack>
+    </Alert>
   }
 
   return (
