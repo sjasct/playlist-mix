@@ -65,9 +65,19 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
     "00wJS6fyHVf4sWy0Px2XSa"
   ];
 
-  const getPlaylistItems = (id: string, offset: number, resolve: (trackIds: string[]) => void, existingIds = [] as string[]) => {
+  interface ITrack{
+    uri: string;
+    added: string;
+  }
+
+  const getPlaylistItems = (id: string, offset: number, resolve: (trackIds: ITrack[]) => void, existingIds = [] as ITrack[]) => {
     sdk.playlists.getPlaylistItems(id, undefined, undefined, maxPlaylistItemLimit, offset, undefined).then((r) => {
-      existingIds = existingIds.concat(r.items.map((y) => `spotify:track:${y.track.id}`))
+      existingIds = existingIds.concat(
+        r.items.map((y) => ({
+          uri: `spotify:track:${y.track.id}`,
+          added: y.added_at
+        } as ITrack))
+      )
 
       if (r.next) {
         getPlaylistItems(id, offset + maxPlaylistItemLimit, resolve, existingIds);
@@ -78,11 +88,11 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
     })
   }
 
-  const playTracks = (deviceId: string) => {
+  const playTracks = (deviceId: string, fresh: Boolean) => {
     setTracksLoading(true);
 
     let completedCount = 0;
-    let trackIds = [] as string[];
+    let trackIds = [] as ITrack[];
 
     playlistIds.forEach((id) => {
       getPlaylistItems(id, 0, (newTracks) => {
@@ -90,8 +100,13 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
         completedCount++;
 
         if (completedCount === playlistIds.length) {
+          if(fresh){
+            console.log(trackIds);
+            trackIds.sort((x, b) => Date.parse(b.added) - Date.parse(x.added));
+            trackIds = trackIds.slice(0, trackIds.length > 50 ? 50 : trackIds.length);
+          }
           shuffle(trackIds)
-          sdk.player.startResumePlayback(deviceId, undefined, trackIds, undefined, undefined);
+          sdk.player.startResumePlayback(deviceId, undefined, trackIds.map(y => y.uri), undefined, undefined);
           setTracksLoading(false);
         }
       });
@@ -149,7 +164,8 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
         ))}
       </Select>
 
-      <Button onClick={async () => await playTracks(selectedDevice!)} loading={tracksLoading} disabled={!selectedDevice || devicesLoading}>Play</Button>
+      <Button onClick={async () => await playTracks(selectedDevice!, false)} loading={tracksLoading} disabled={!selectedDevice || devicesLoading}>Play All</Button>
+      <Button onClick={async () => await playTracks(selectedDevice!, true)} loading={tracksLoading} disabled={!selectedDevice || devicesLoading}>Play Fresh</Button>
       <Button color="neutral" onClick={refresh} loading={devicesLoading}>Refresh Devices</Button>
     </Stack>
   );
