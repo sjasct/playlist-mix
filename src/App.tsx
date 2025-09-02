@@ -21,11 +21,19 @@ function App() {
 }
 
 function CoreApp({ sdk }: { sdk: SpotifyApi }) {
+
+  enum MixType {
+    All,
+    Fresh,
+    FreshFrontLoaded
+  }
+
   const [devices, setDevices] = useState<Device[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
   const [tracksLoading, setTracksLoading] = useState(false);
   const [intialLoad, setInitialLoad] = useState(true);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+  const [selectedMixType, setSelectedMixType] = useState<MixType | null>(MixType.All);
   const [refreshKey, setRefreshKey] = useState(0);
   const [invalidUser, setInvalidUser] = useState(false);
   const maxPlaylistItemLimit = 50;
@@ -88,7 +96,7 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
     })
   }
 
-  const playTracks = (deviceId: string, fresh: Boolean) => {
+  const playTracks = (deviceId: string) => {
     setTracksLoading(true);
 
     let completedCount = 0;
@@ -100,32 +108,68 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
         completedCount++;
 
         if (completedCount === playlistIds.length) {
-          if(fresh){
-            console.log(trackIds);
-            trackIds.sort((x, b) => Date.parse(b.added) - Date.parse(x.added));
-            trackIds = trackIds.slice(0, trackIds.length > 50 ? 50 : trackIds.length);
-          }
-          shuffle(trackIds)
-          sdk.player.startResumePlayback(deviceId, undefined, trackIds.map(y => y.uri), undefined, undefined);
+          var shuffledTracks = shuffleTracks(trackIds, selectedMixType ?? MixType.All);
+          sdk.player.togglePlaybackShuffle(false, deviceId);
+          sdk.player.startResumePlayback(deviceId, undefined, shuffledTracks.map(y => y.uri), undefined, undefined);
           setTracksLoading(false);
         }
       });
     });
   }
 
-  // https://stackoverflow.com/a/2450976
-  const shuffle = (array: any[]) => {
-    let currentIndex = array.length;
 
-    while (currentIndex != 0) {
-      let randomIndex = Math.floor(Math.random() * currentIndex);
-      currentIndex--;
-      [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+function shuffleTracks(tracks: ITrack[], mode: MixType): ITrack[] {
+  // Sort by most recent first
+  const sorted = [...tracks].sort(
+    (a, b) => new Date(b.added).getTime() - new Date(a.added).getTime()
+  );
+
+  switch (mode) {
+    case MixType.All:
+      return shuffle(tracks);
+
+    case MixType.Fresh:
+      return sorted.slice(0, 50);
+
+    case MixType.FreshFrontLoaded: {
+      if (tracks.length <= 100) {
+        return shuffle(tracks);
+      }
+
+      const recent50 = sorted.slice(0, 50);
+      const olderTracks = sorted.slice(50);
+
+      const shuffledRecent = shuffle(recent50);
+      const shuffledOlder = shuffle(olderTracks);
+
+      const firstBucketOlder = shuffledOlder.slice(0, 100);
+      const remainingOlder = shuffledOlder.slice(100);
+
+      const first100 = shuffle([...shuffledRecent, ...firstBucketOlder]);
+
+      return [...first100, ...remainingOlder] as ITrack[];
     }
   }
+}
 
-  const handleChange = (_event: React.SyntheticEvent | null, newValue: string | null) => {
+function shuffle<T>(items: T[]): T[] {
+  const result = [...items];
+  for (let currentIndex = result.length - 1; currentIndex > 0; currentIndex--) {
+    const randomIndex = Math.floor(Math.random() * (currentIndex + 1));
+    [result[currentIndex], result[randomIndex]] = [
+      result[randomIndex],
+      result[currentIndex],
+    ];
+  }
+  return result;
+}
+
+  const handleDeviceChange = (_event: React.SyntheticEvent | null, newValue: string | null) => {
     setSelectedDevice(newValue);
+  };
+
+  const handleMixTypeChange = (_event: React.SyntheticEvent | null, newValue: MixType | null) => {
+    setSelectedMixType(newValue);
   };
 
   const refresh = () => {
@@ -158,14 +202,23 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
     >
       <h2>Playlist Mixer</h2>
       <p>Select a Spotify Connect device</p>
-      <Select onChange={handleChange} value={selectedDevice} disabled={devicesLoading || tracksLoading}>
+      <Select onChange={handleDeviceChange} value={selectedDevice} disabled={devicesLoading || tracksLoading}>
         {devices.map((device) => (
           <Option key={device.id} value={device.id}>{device.name} {device.is_active && "(Active)"}</Option>
         ))}
       </Select>
 
-      <Button onClick={async () => await playTracks(selectedDevice!, false)} loading={tracksLoading} disabled={!selectedDevice || devicesLoading}>Play All</Button>
-      <Button onClick={async () => await playTracks(selectedDevice!, true)} loading={tracksLoading} disabled={!selectedDevice || devicesLoading}>Play Fresh</Button>
+      <Select onChange={handleMixTypeChange} value={selectedMixType} disabled={devicesLoading || tracksLoading}>
+        {Object.values(MixType)
+          .filter((v) => typeof v === "number")
+          .map((enumValue) => (
+            <Option key={enumValue} value={enumValue}>
+              {MixType[enumValue as number]}
+            </Option>
+          ))}
+      </Select>
+
+      <Button onClick={async () => await playTracks(selectedDevice!)} loading={tracksLoading} disabled={!selectedDevice || devicesLoading}>Play All</Button>
       <Button color="neutral" onClick={refresh} loading={devicesLoading}>Refresh Devices</Button>
     </Stack>
   );
