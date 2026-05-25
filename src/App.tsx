@@ -109,6 +109,10 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
 
         if (completedCount === playlistIds.length) {
           var shuffledTracks = shuffleTracks(trackIds, selectedMixType ?? MixType.All);
+          
+          // max limit of 750 to avoid reaching 413 response
+          shuffledTracks = shuffledTracks.slice(0, 750); 
+
           sdk.player.togglePlaybackShuffle(false, deviceId);
           sdk.player.startResumePlayback(deviceId, undefined, shuffledTracks.map(y => y.uri), undefined, undefined);
           setTracksLoading(false);
