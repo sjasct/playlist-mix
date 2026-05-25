@@ -33,7 +33,7 @@ function CoreApp({ sdk }: { sdk: SpotifyApi }) {
   const [tracksLoading, setTracksLoading] = useState(false);
   const [intialLoad, setInitialLoad] = useState(true);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
-  const [selectedMixType, setSelectedMixType] = useState<MixType | null>(MixType.All);
+  const [selectedMixType, setSelectedMixType] = useState<MixType | null>(MixType.FreshFrontLoaded);
   const [refreshKey, setRefreshKey] = useState(0);
   const [invalidUser, setInvalidUser] = useState(false);
   const maxPlaylistItemLimit = 50;
